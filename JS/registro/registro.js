@@ -24,12 +24,19 @@ document.addEventListener('DOMContentLoaded', () => {
     return;
   }
 
-  // 2. GUARDAR PEDIDO EN NEON DB
+  // 2. AUTOCOMPLETAR PRODUCTO SELECCIONADO DESDE INDEX.HTML
+  const comboSeleccionado = localStorage.getItem('combo_seleccionado');
+  if (comboSeleccionado && inputProductos && !inputProductos.value) {
+    inputProductos.value = `Combo Seleccionado: ${comboSeleccionado.toUpperCase()}`;
+    // Limpiamos el selector temporal
+    localStorage.removeItem('combo_seleccionado');
+  }
+
+  // 3. GUARDAR PEDIDO EN NEON DB Y REDIRIGIR A PAGO.HTML
   if (formPedido) {
     formPedido.addEventListener('submit', async (e) => {
       e.preventDefault();
 
-      // Garantizar que 'nombreCliente' NUNCA sea null/vacío
       const valorNombreInput = inputNombre ? inputNombre.value.trim() : '';
       const nombreCliente = valorNombreInput || usuario.nombre || 'Cliente Crocanti';
       
@@ -41,19 +48,27 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
-      // Obtener el ID del usuario logueado
       const idUsuario = usuario.id || usuario.id_usuario;
 
       try {
-        // Enviar todos los campos NOT NULL a pedidos_recojo
-        await consultarNeon(
+        // RETURNING id nos devuelve el identificador recién creado en Neon
+        const resultado = await consultarNeon(
           `INSERT INTO pedidos_recojo (id_usuario, nombre_cliente, productos, hora_recojo, estado)
-           VALUES ($1, $2, $3, $4, 'pendiente');`,
+           VALUES ($1, $2, $3, $4, 'pendiente')
+           RETURNING id;`,
           [idUsuario, nombreCliente, productos, horaRecojo]
         );
 
-        alert('¡Pedido registrado con éxito en Crocanti Chicken!');
-        window.location.href = 'consulta.html';
+        if (resultado && resultado.length > 0) {
+          const idPedidoCreado = resultado[0].id;
+          alert('¡Pedido registrado! Serás redirigido a la pasarela de pago.');
+          
+          // Enviar directo a la Pasarela con el ID del pedido
+          window.location.href = `pago.html?id=${idPedidoCreado}`;
+        } else {
+          // Fallback en caso de no retornar ID
+          window.location.href = 'consulta.html';
+        }
 
       } catch (error) {
         console.error('Error detallado al guardar el pedido:', error);

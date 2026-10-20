@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Comprobante de Pago - Crocanti Chicken</title>
+  <link rel="stylesheet" href="css/comprobante.css">
+</head>
+<body>
+  <div style="max-width: 400px; margin: 2rem auto; padding: 1.5rem; border: 1px dashed #000; font-family: monospace;">
+    <h2 style="text-align: center;">CROCANTI CHICKEN PERÚ</h2>
+    <p style="text-align: center;">RUC: 20601234567<br>Ticket de Pago Digital</p>
+    <hr>
+    <p><strong>N° Pedido:</strong> #<span id="comp-id">--</span></p>
+    <p><strong>Cliente:</strong> <span id="comp-cliente">--</span></p>
+    <p><strong>Detalle:</strong> <span id="comp-productos">--</span></p>
+    <p><strong>Método de Pago:</strong> <span id="comp-metodo">--</span></p>
+    <p><strong>Estado:</strong> PAGADO</p>
+    <hr>
+    <p style="text-align: center;">¡Gracias por tu preferencia!</p>
+    
+    <div style="text-align: center; margin-top: 1.5rem;" class="no-print">
+      <button onclick="window.print()" style="padding: 0.5rem 1rem; cursor: pointer;">🖨 Imprimir / Guardar PDF</button>
+      <br><br>
+      <a href="index.html">Volver al Menú Principal</a>
+    </div>
+  </div>
+
+  <script type="module">
+    import { consultarNeon } from './JS/config/neon-config.js';
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const idPedido = urlParams.get('id');
+    const metodo = urlParams.get('metodo') || 'Efectivo';
+
+    if (idPedido) {
+      document.getElementById('comp-id').textContent = idPedido;
+      document.getElementById('comp-metodo').textContent = metodo;
+
+      consultarNeon(`SELECT * FROM pedidos_recojo WHERE id = $1;`, [idPedido])
+        .then(res => {
+          if (res && res.length > 0) {
+            document.getElementById('comp-cliente').textContent = res[0].nombre_cliente;
+            document.getElementById('comp-productos').textContent = res[0].productos;
+          }
+        })
+        .catch(console.error);
+    }
+  </script>
+</body>
+</html>

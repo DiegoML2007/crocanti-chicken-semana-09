@@ -1,44 +1,90 @@
 // JS/auth/auth.js
 
-// Verificar sesión actual
-export function verificarSesion() {
-  const usuarioGuardado = localStorage.getItem('usuario_crocanti');
+// 1. Obtener usuario actual
+export function obtenerUsuarioActual() {
+  const usuarioGuardado = localStorage.getItem('usuario_sesion') || localStorage.getItem('usuario_crocanti');
   return usuarioGuardado ? JSON.parse(usuarioGuardado) : null;
 }
 
-// Iniciar Sesión (Esta es la que faltaba y causaba el error en login.js)
+export function verificarSesion() {
+  return obtenerUsuarioActual();
+}
+
+// 2. Iniciar Sesión (Sincroniza ambas llaves de localStorage)
 export function iniciarSesion(usuario) {
+  localStorage.setItem('usuario_sesion', JSON.stringify(usuario));
   localStorage.setItem('usuario_crocanti', JSON.stringify(usuario));
 }
 
-// Cerrar Sesión
+// 3. Cerrar Sesión
 export function cerrarSesion() {
+  localStorage.removeItem('usuario_sesion');
   localStorage.removeItem('usuario_crocanti');
   localStorage.removeItem('carrito_crocanti');
   window.location.href = 'login.html';
 }
 
-// Renderizar enlace 'Panel' para Administrador y Empleado
-export function cargarMenuPanel() {
-    const usuario = verificarSesion();
-    if (!usuario) return;
+// 4. Exigir Rol en páginas privadas
+export function exigirRol(rolesPermitidos = []) {
+  const usuario = obtenerUsuarioActual();
+  if (!usuario) {
+    window.location.href = 'login.html';
+    return null;
+  }
 
-    // Verificar si el rol es 'administrador' o 'empleado'
-    if (usuario.rol === 'administrador' || usuario.rol === 'empleado') {
-        const navUl = document.querySelector('header nav ul') || document.querySelector('.nav-links') || document.querySelector('nav');
-        
-        if (navUl && !document.querySelector('#link-panel-nav')) {
-            const li = document.createElement('li');
-            li.id = 'link-panel-nav';
-            li.innerHTML = `<a href="panel.html" style="font-weight: bold; color: #ffeb3b;">Panel</a>`;
-            
-            // Insertar antes del botón de usuario o al final del menú
-            const usuarioBtn = document.querySelector('.user-info') || document.querySelector('#cerrar-sesion') || navUl.lastElementChild;
-            if (usuarioBtn && usuarioBtn.parentElement === navUl) {
-                navUl.insertBefore(li, usuarioBtn);
-            } else {
-                navUl.appendChild(li);
-            }
-        }
+  const rolActual = (usuario.rol || '').toLowerCase();
+  const rolesMinusculas = rolesPermitidos.map(r => r.toLowerCase());
+
+  if (rolesPermitidos.length > 0 && !rolesMinusculas.includes(rolActual)) {
+    alert('No tienes permisos para acceder a esta vista.');
+    window.location.href = 'index.html';
+    return null;
+  }
+
+  return usuario;
+}
+
+// 5. Renderizar enlaces dinámicos en el menú
+export function cargarMenuPanel() {
+  const usuario = obtenerUsuarioActual();
+  if (!usuario) return;
+
+  const nav = document.querySelector('header nav');
+  if (!nav) return;
+
+  const rol = (usuario.rol || '').toLowerCase();
+
+  // Enlace Panel Admin (para Admin y Empleado)
+  if (rol === 'administrador' || rol === 'admin' || rol === 'empleado') {
+    if (!document.getElementById('link-panel-nav')) {
+      const a = document.createElement('a');
+      a.id = 'link-panel-nav';
+      a.href = 'panel.html';
+      a.className = 'btn-nav';
+      a.style.backgroundColor = '#2a9d8f';
+      a.style.color = '#fff';
+      a.style.padding = '0.4rem 0.8rem';
+      a.style.borderRadius = '4px';
+      a.style.marginRight = '0.5rem';
+      a.textContent = '⚙ Panel Admin';
+      nav.appendChild(a);
     }
+  }
+
+  // Enlace Módulo Caja (para Cajero, Admin y Empleado)
+  if (rol === 'cajero' || rol === 'administrador' || rol === 'admin' || rol === 'empleado') {
+    if (!document.getElementById('link-caja-nav')) {
+      const a = document.createElement('a');
+      a.id = 'link-caja-nav';
+      a.href = 'caja.html';
+      a.className = 'btn-nav';
+      a.style.backgroundColor = '#e76f51';
+      a.style.color = '#fff';
+      a.style.padding = '0.4rem 0.8rem';
+      a.style.borderRadius = '4px';
+      a.style.marginRight = '0.5rem';
+      a.textContent = '🏪 Módulo Caja';
+      nav.appendChild(a);
+    }
+  }
 }

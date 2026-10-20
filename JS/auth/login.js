@@ -49,10 +49,21 @@ document.addEventListener('DOMContentLoaded', () => {
           [correo, password]
         );
 
-        if (usuarios.length > 0) {
-          alert(`¡Bienvenido ${usuarios[0].nombre}!`);
-          iniciarSesion(usuarios[0]);
-          window.location.href = (usuarios[0].rol === 'administrador') ? 'panel.html' : 'index.html';
+        if (usuarios && usuarios.length > 0) {
+          const usuario = usuarios[0];
+          alert(`¡Bienvenido ${usuario.nombre}!`);
+          
+          iniciarSesion(usuario);
+
+          const rol = (usuario.rol || '').toLowerCase();
+
+          if (rol === 'cajero') {
+            window.location.href = 'caja.html';
+          } else if (rol === 'administrador' || rol === 'admin' || rol === 'empleado') {
+            window.location.href = 'panel.html';
+          } else {
+            window.location.href = 'index.html';
+          }
         } else {
           alert('Correo o contraseña incorrectos.');
         }

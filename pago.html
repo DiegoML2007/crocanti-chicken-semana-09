@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pasarela de Pago - Crocanti Chicken Perú</title>
+  <link rel="stylesheet" href="css/pago.css">
+</head>
+<body>
+  <main style="max-width: 500px; margin: 3rem auto; padding: 2rem; border: 1px solid #ddd; border-radius: 8px;">
+    <h2>Pasarela de Pago Digital</h2>
+    <p>Pedido #<span id="pago-id-pedido">--</span></p>
+
+    <form id="form-pago">
+      <div style="margin-bottom: 1rem;">
+        <label>Selecciona Método de Pago:</label><br>
+        <select id="pago-metodo" style="width: 100%; padding: 0.5rem; margin-top: 0.5rem;">
+          <option value="Yape">Yape / Plin</option>
+          <option value="Tarjeta">Tarjeta Débito/Crédito</option>
+        </select>
+      </div>
+
+      <div style="margin-bottom: 1rem;">
+        <label>Número de Operación / Referencia:</label>
+        <input type="text" id="pago-operacion" placeholder="Ej. 984512" required style="width: 100%; padding: 0.5rem;">
+      </div>
+
+      <button type="submit" style="width: 100%; background-color: #e76f51; color: white; border: none; padding: 0.75rem; cursor: pointer; font-weight: bold;">Confirmar Pago</button>
+    </form>
+  </main>
+
+  <script type="module">
+    import { consultarNeon } from './JS/config/neon-config.js';
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const idPedido = urlParams.get('id');
+
+    if (!idPedido) {
+      alert('Pedido no válido.');
+      window.location.href = 'index.html';
+    } else {
+      document.getElementById('pago-id-pedido').textContent = idPedido;
+    }
+
+    document.getElementById('form-pago').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const metodo = document.getElementById('pago-metodo').value;
+      const codOp = document.getElementById('pago-operacion').value.trim();
+
+      try {
+        await consultarNeon(
+          `UPDATE pedidos_recojo SET estado = 'pagado' WHERE id = $1;`,
+          [idPedido]
+        );
+        alert('¡Pago procesado con éxito!');
+        window.location.href = `comprobante.html?id=${idPedido}&metodo=${metodo}&codOp=${codOp}`;
+      } catch (err) {
+        console.error(err);
+        alert('Error al registrar el pago.');
+      }
+    });
+  </script>
+</body>
+</html>

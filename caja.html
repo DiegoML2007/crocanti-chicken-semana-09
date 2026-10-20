@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Módulo de Caja - Crocanti Chicken Perú</title>
+  <link rel="stylesheet" href="css/caja.css">
+</head>
+<body>
+  <header>
+    <div class="logo">
+      <h1>Crocanti Chicken - Ventanilla de Caja</h1>
+    </div>
+    <nav>
+      <a href="index.html">Menú</a>
+      <a href="caja.html" class="active">Módulo Caja</a>
+      <button id="btn-logout" class="btn-logout">Cerrar Sesión</button>
+    </nav>
+  </header>
+
+  <main style="padding: 2rem; max-width: 900px; margin: 0 auto;">
+    <h2>Búsqueda y Cobro de Pedidos</h2>
+
+    <!-- Buscador de pedidos -->
+    <section class="caja-buscar" style="margin-bottom: 2rem;">
+      <label for="buscar-id">Código o ID de Pedido:</label>
+      <input type="number" id="buscar-id" placeholder="Ej. 15">
+      <button type="button" id="btn-buscar">Buscar Pedido</button>
+    </section>
+
+    <!-- Detalle del pedido encontrado -->
+    <section id="detalle-pedido" style="display: none; border: 1px solid #ccc; padding: 1.5rem; border-radius: 8px;">
+      <h3>Detalle del Pedido #<span id="pedido-id"></span></h3>
+      <p><strong>Cliente:</strong> <span id="pedido-cliente"></span></p>
+      <p><strong>Productos:</strong> <span id="pedido-productos"></span></p>
+      <p><strong>Hora Recojo:</strong> <span id="pedido-hora"></span></p>
+      <p><strong>Estado Actual:</strong> <span id="pedido-estado"></span></p>
+
+      <div class="metodo-pago-caja" style="margin-top: 1.5rem;">
+        <label for="tipo-pago">Método de Cobro:</label>
+        <select id="tipo-pago">
+          <option value="Efectivo">Efectivo (Ventanilla)</option>
+          <option value="Yape">Yape / Plin</option>
+          <option value="Tarjeta">Tarjeta de Débito/Crédito</option>
+        </select>
+        <button type="button" id="btn-cobrar" style="margin-left: 1rem; background-color: #2a9d8f; color: white; border: none; padding: 0.5rem 1rem; cursor: pointer;">Registrar Pago</button>
+      </div>
+    </section>
+  </main>
+
+  <script type="module">
+    import { exigirRol, cerrarSesion } from './JS/auth/auth.js';
+    import { consultarNeon } from './JS/config/neon-config.js';
+
+    // Permitir acceso a cajeros, administradores y empleados
+    exigirRol(['cajero', 'administrador', 'admin', 'empleado']);
+
+    document.getElementById('btn-logout').addEventListener('click', cerrarSesion);
+
+    const btnBuscar = document.getElementById('btn-buscar');
+    const btnCobrar = document.getElementById('btn-cobrar');
+    let pedidoActual = null;
+
+    btnBuscar.addEventListener('click', async () => {
+      const id = document.getElementById('buscar-id').value;
+      if (!id) return alert('Ingresa un ID de pedido.');
+
+      try {
+        const res = await consultarNeon(`SELECT * FROM pedidos_recojo WHERE id = $1;`, [id]);
+        if (res && res.length > 0) {
+          pedidoActual = res[0];
+          document.getElementById('pedido-id').textContent = pedidoActual.id;
+          document.getElementById('pedido-cliente').textContent = pedidoActual.nombre_cliente;
+          document.getElementById('pedido-productos').textContent = pedidoActual.productos;
+          document.getElementById('pedido-hora').textContent = pedidoActual.hora_recojo;
+          document.getElementById('pedido-estado').textContent = pedidoActual.estado;
+          document.getElementById('detalle-pedido').style.display = 'block';
+        } else {
+          alert('No se encontró ningún pedido con ese ID.');
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    });
+
+    btnCobrar.addEventListener('click', async () => {
+      if (!pedidoActual) return;
+      const metodo = document.getElementById('tipo-pago').value;
+
+      try {
+        await consultarNeon(
+          `UPDATE pedidos_recojo SET estado = 'pagado' WHERE id = $1;`,
+          [pedidoActual.id]
+        );
+        alert('¡Pago registrado correctamente!');
+        window.location.href = `comprobante.html?id=${pedidoActual.id}&metodo=${metodo}`;
+      } catch (err) {
+        console.error(err);
+        alert('Error al registrar el pago en la base de datos.');
+      }
+    });
+  </script>
+</body>
+</html>
